@@ -72,6 +72,7 @@ def is_hogwarts_related(message):
         points_util.get_houses_from(message["text"]))
 
 def main():
+    print("Testing how logging works")
     sc = SlackClient(SLACK_TOKEN)
     p = PointCounter()
     if sc.rtm_connect():
