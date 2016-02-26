@@ -1,2 +1,2 @@
 Pillow
--e git@github.com:jdpopkin/python-slackclient.git@websocket_opts
+-e git+https://github.com/jdpopkin/python-slackclient.git
