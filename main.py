@@ -73,7 +73,8 @@ def is_hogwarts_related(message):
 
 def main():
     print("Testing how logging works")
-    sc = SlackClient(SLACK_TOKEN)
+    port = int(os.environ.get("PORT", 80)
+    sc = SlackClient(SLACK_TOKEN, None, http_proxy_port=port)
     p = PointCounter()
     if sc.rtm_connect():
         while True:
