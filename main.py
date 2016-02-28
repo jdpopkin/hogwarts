@@ -8,6 +8,8 @@ import re
 import pickle
 from slackclient import SlackClient
 import time
+from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from threading import Thread
 
 nth = {
     1: "first",
@@ -71,7 +73,7 @@ def is_hogwarts_related(message):
         "point" in message["text"] and
         points_util.get_houses_from(message["text"]))
 
-def main():
+def run_chatbot():
     print("Testing how logging works")
     port = int(os.environ.get("PORT", 80))
     print("Should be bound to port %s" % port)
@@ -95,6 +97,15 @@ def main():
     else:
         print "Connection Failed, invalid token?"
 
+def start_server():
+    port = int(os.environ.get("PORT", 80))
+    server = HTTPServer(('', port), BaseHTTPRequestHandler)
+    server.serve_forever()
+
+def main():
+    server_thread = Thread(target = start_server)
+    server_thread.start()
+    run_chatbot()
 
 if __name__ == "__main__":
     main()
