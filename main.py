@@ -10,6 +10,8 @@ from slackclient import SlackClient
 import time
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
+import psycopg2
+import urlparse
 
 nth = {
     1: "first",
@@ -21,16 +23,36 @@ nth = {
 class PointCounter(object):
     def __init__(self, prefects=PREFECTS,
                  announcers=ANNOUNCERS, points_file=POINTS_FILE):
-        try:
-            self.points = pickle.load(open(points_file, 'rb'))
-            if "Gryffendor" in self.points:
-                self.points["Gryffindor"] = self.point["Gryffendor"]
-                del self.points["Gryffendor"]
-        except:
-            self.points = Counter()
+        urlparse.uses_netloc.append("postgres")
+        url = urlparse.urlparse(os.environ["DATABASE_URL"])
+        self.conn = psycopg2.connect(
+                database=url.path[1:],
+                user=url.username,
+                password=url.password,
+                host=url.hostname,
+                port=url.port
+        )
+        self.points = self.load_all_points()
         self.prefects = prefects
         self.announcers = announcers
-        self.points_file = points_file
+
+    def load_all_points(self):
+        points = {}
+        for house in HOUSES:
+            points[house] = self.load_points_for(house)
+        return points
+
+    def load_points_for(self, house_name):
+        cur = self.conn.cursor()
+        cur.execute(
+                """SELECT coalesce(sum(value), 0) FROM awardings WHERE house = %s;""",
+                (house_name,)
+        )
+        result = cur.fetchone()[0]
+
+        self.conn.commit()
+        cur.close()
+        return result
 
     def get_points_from(self, message, awarder):
         amount = points_util.detect_points(message)
@@ -54,9 +76,18 @@ class PointCounter(object):
         if points and houses:
             for house in houses:
                 self.points[house] += points
-                pickle.dump(self.points, open(self.points_file, 'wb'))
+                self.record_point_change(house, points)
                 messages.append(self.message_for(house, points))
         return messages
+
+    def record_point_change(self, house, points):
+        cur = self.conn.cursor()
+        cur.execute(
+                """INSERT INTO awardings (house, value) VALUES (%s,%s);""",
+                (house, points)
+        )
+        self.conn.commit()
+        cur.close()
 
     def print_status(self):
         for place, (house, points) in enumerate(sorted(self.points.items(), key=lambda x: x[-1])):
