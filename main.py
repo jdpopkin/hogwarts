@@ -9,6 +9,7 @@ import pickle
 from slackclient import SlackClient
 import time
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+import httplib
 from threading import Thread
 import psycopg2
 import urlparse
@@ -133,9 +134,20 @@ def start_server():
     server = HTTPServer(('', port), BaseHTTPRequestHandler)
     server.serve_forever()
 
+def ping_server():
+    while True:
+        print "Pinging server."
+        conn = httplib.HTTPSConnection(os.environ.get("URL"))
+        conn.request("GET", "/")
+        r1 = conn.getresponse()
+        time.sleep(60 * 29)
+
 def main():
     server_thread = Thread(target = start_server)
     server_thread.start()
+    ping_thread = Thread(target = ping_server)
+    ping_thread.start()
+
     run_chatbot()
 
 if __name__ == "__main__":
